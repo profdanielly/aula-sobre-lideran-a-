@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Ilha do Futuro: Simulação de Sobrevivência e Negociação</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #061113;
+      --bg-panel: #0c1f23;
+      --bg-card: #122c31;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-danger: #ef4444;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-deep);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(245, 158, 11, 0.07) 0%, transparent 40%),
+        linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Animações suaves */
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulseBorder {
+      0%, 100% { border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 15px rgba(245, 158, 11, 0.15); }
+      50% { border-color: rgba(245, 158, 11, 0.95); box-shadow: 0 0 25px rgba(245, 158, 11, 0.35); }
+    }
+
+    @keyframes shakeAlert {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .animate-enter {
+      animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .crisis-alert {
+      animation: pulseBorder 2.2s infinite, shakeAlert 0.45s ease-in-out;
+    }
+
+    /* Scrollbar customizada */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #061113;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e3f45;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- BARRA SUPERIOR TÁTICA + CRONÔMETRO DE SALA DE AULA -->
+  <header class="sticky top-0 z-40 bg-[#071518]/90 backdrop-blur-md border-b border-emerald-900/50 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- Identidade da Missão -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-inner">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-mono-tech uppercase tracking-widest text-amber-400 font-bold">Expedição Ômega-9</span>
+            <span id="phase-badge" class="text-[11px] font-mono-tech px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700/50">BRIEFING</span>
+          </div>
+          <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight">A Ilha do Futuro</h1>
+        </div>
+      </div>
+
+      <!-- Painel do Cronômetro do Professor -->
+      <div class="flex items-center gap-2 bg-[#0d2328] border border-emerald-800/50 px-3 py-1.5 rounded-xl shadow-inner">
+        <div class="flex items-center gap-1.5 pr-2 border-r border-emerald-900/60">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span id="timer-display" class="font-mono-tech text-lg sm:text-xl font-bold text-amber-400 tracking-wider">15:00</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="setTimerPreset(15)" title="Preset Fase 1 (15 min)" class="text-xs font-mono-tech px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">15m</button>
+          <button onclick="setTimerPreset(10)" title="Preset Conselho Geral (10 min)" class="text-xs font-mono-tech px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">10m</button>
+          <button id="timer-toggle-btn" onclick="toggleTimer()" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition">Iniciar</button>
+          <button onclick="resetTimer()" title="Resetar Cronômetro" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ÁREA DE NOTIFICAÇÕES / TOAST (Substitui alert/confirm) -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- CONTAINER PRINCIPAL -->
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+
+    <!-- =================================================================== -->
+    <!-- TELA 1: BRIEFING DA MISSÃO E CONFIGURAÇÃO DE MODO                   -->
+    <!-- =================================================================== -->
+    <section id="screen-briefing" class="animate-enter space-y-6">
+      <div class="bg-[#0c1f23] border border-emerald-800/50 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex flex-col lg:flex-row gap-8 items-start">
+          <!-- Narrativa do Cenário -->
+          <div class="flex-1 space-y-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-mono-tech font-semibold">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              TRANSMISSÃO DE EMERGÊNCIA • STATUS: CRÍTICO
+            </div>
+
+            <h2 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              O Acidente na <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-amber-300">Ilha do Futuro</span>
+            </h2>
+
+            <div class="bg-[#071417] border-l-4 border-amber-500 p-4 sm:p-5 rounded-r-xl text-slate-300 space-y-3 text-sm sm:text-base leading-relaxed">
+              <p>
+                "Vocês fazem parte de uma expedição científica e tecnológica que sofreu um acidente aéreo. Todos sobreviveram e chegaram a uma <strong class="text-white">ilha deserta e inexplorada</strong>, sem sinal de celular ou internet."
+              </p>
+              <p>
+                "O resgate só chegará em <strong class="text-amber-400">30 dias</strong>. Vocês conseguiram salvar apenas uma caixa com <strong class="text-emerald-400">12 itens</strong> dos destroços, mas a maré está subindo rapidamente e o grupo só tem capacidade física para carregar <strong class="text-white underline decoration-amber-500">5 itens</strong> para o topo da montanha onde ficarão acampados."
+              </p>
+            </div>
+
+            <!-- Indicadores Iniciais -->
+            <div class="grid grid-cols-3 gap-3 pt-2">
+              <div class="bg-[#10292e] border border-emerald-800/40 rounded-xl p-3 text-center">
+                <div class="text-xs text-slate-400 uppercase font-mono-tech">Pontuação Inicial</div>
+                <div class="text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono-tech mt-0.5">100 PS</div>
+              </div>
+              <div class="bg-[#10292e] border border-emerald-800/40 rounded-xl p-3 text-center">
+                <div class="text-xs text-slate-400 uppercase font-mono-tech">Limite da Mochila</div>
+                <div class="text-xl sm:text-2xl font-extrabold text-amber-400 font-mono-tech mt-0.5">5 / 12 Itens</div>
+              </div>
+              <div class="bg-[#10292e] border border-emerald-800/40 rounded-xl p-3 text-center">
+                <div class="text-xs text-slate-400 uppercase font-mono-tech">Tempo de Resgate</div>
+                <div class="text-xl sm:text-2xl font-extrabold text-white font-mono-tech mt-0.5">30 Dias</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Painel de Seleção de Modo de Jogo -->
+          <div class="w-full lg:w-[420px] bg-[#08171a] border border-emerald-800/60 rounded-2xl p-5 sm:p-6 space-y-5 shadow-xl">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              Configurar Simulação
+            </h3>
+
+            <!-- Botões de Modo -->
+            <div class="space-y-2.5">
+              <button type="button" onclick="selectGameMode('solo')" id="mode-btn-solo" class="w-full text-left p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-950/40 transition flex items-start gap-3">
+                <span class="text-xl mt-0.5">🧭</span>
+                <div>
+                  <div class="font-bold text-white text-sm">Modo Solo / 1 Equipe</div>
+                  <div class="text-xs text-slate-400 mt-0.5">Ideal para jogar no computador ou projetar uma equipe única.</div>
+                </div>
+              </button>
+
+              <button type="button" onclick="selectGameMode('multi')" id="mode-btn-multi" class="w-full text-left p-3.5 rounded-xl border-2 border-slate-800 bg-[#0d2226] hover:border-emerald-700 transition flex items-start gap-3">
+                <span class="text-xl mt-0.5">🏫</span>
+                <div>
+                  <div class="font-bold text-white text-sm">Modo Sala de Aula (2 a 6 Grupos)</div>
+                  <div class="text-xs text-slate-400 mt-0.5">Cada grupo monta sua lista, disputa pontos e vota no melhor porta-voz.</div>
+                </div>
+              </button>
+
+              <button type="button" onclick="selectGameMode('council')" id="mode-btn-council" class="w-full text-left p-3.5 rounded-xl border-2 border-slate-800 bg-[#0d2226] hover:border-amber-600 transition flex items-start gap-3">
+                <span class="text-xl mt-0.5">⚖️</span>
+                <div>
+                  <div class="font-bold text-amber-300 text-sm">Conselho Geral (Lista Única da Turma)</div>
+                  <div class="text-xs text-slate-400 mt-0.5">Os porta-vozes negociam em 10 min uma única mochila para toda a sala.</div>
+                </div>
+              </button>
+            </div>
+
+            <!-- Configuração Dinâmica de Equipes -->
+            <div id="team-config-box" class="space-y-3 pt-2 border-t border-emerald-900/50">
+              <div id="multi-count-wrapper" class="hidden flex items-center justify-between">
+                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Número de Grupos:</label>
+                <div class="flex gap-1.5">
+                  <button type="button" onclick="setTeamCount(2)" class="team-count-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-bold bg-slate-800 text-slate-300">2</button>
+                  <button type="button" onclick="setTeamCount(3)" class="team-count-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-bold bg-slate-800 text-slate-300">3</button>
+                  <button type="button" onclick="setTeamCount(4)" class="team-count-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-bold bg-emerald-600 text-slate-950">4</button>
+                  <button type="button" onclick="setTeamCount(5)" class="team-count-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-bold bg-slate-800 text-slate-300">5</button>
+                  <button type="button" onclick="setTeamCount(6)" class="team-count-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-bold bg-slate-800 text-slate-300">6</button>
+                </div>
+              </div>
+
+              <div id="team-names-inputs" class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+
+            <button onclick="startPhase1()" class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-500/20 transition transform active:scale-[0.99] flex items-center justify-center gap-2">
+              <span>Iniciar Fase 1: Montar Mochila</span>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TELA 2: FASE 1 - SELEÇÃO E PRIORIZAÇÃO DOS 5 ITENS                  -->
+    <!-- =================================================================== -->
+    <section id="screen-phase1" class="hidden animate-enter space-y-6">
+      <!-- Seletor de Abas de Equipe (Visível no modo Multi-Grupos) -->
+      <div id="phase1-team-tabs" class="hidden flex flex-wrap items-center justify-between gap-3 bg-[#0c1f23] border border-emerald-800/50 p-3 rounded-2xl">
+        <div class="flex flex-wrap items-center gap-2" id="team-tabs-list"></div>
+        <div class="text-xs text-slate-400 font-mono-tech">
+          Preencha os 5 itens de cada grupo antes de avançar
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Coluna Esquerda: Os 12 Itens Disponíveis -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-white">Caixa de Destroços (12 Itens)</h2>
+              <p class="text-xs sm:text-sm text-slate-400">Clique nos itens para adicioná-los à mochila. Consenso obrigatório!</p>
+            </div>
+            <span id="current-editing-team-badge" class="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-bold">
+              Equipe Alpha
+            </span>
+          </div>
+
+          <div id="items-catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Cards dos 12 itens gerados via JS -->
+          </div>
+        </div>
+
+        <!-- Coluna Direita: A Mochila de 5 Itens (Priorização) -->
+        <div class="lg:col-span-5 bg-[#0c1f23] border-2 border-emerald-700/50 rounded-2xl p-5 shadow-2xl sticky top-20 space-y-4">
+          <div class="flex items-center justify-between border-b border-emerald-900/60 pb-3">
+            <div>
+              <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
+                <span>🎒</span> Mochila de Sobrevivência
+              </h3>
+              <p class="text-xs text-slate-400">Ordene do <strong class="text-amber-400">1º (mais vital)</strong> ao <strong class="text-slate-300">5º</strong></p>
+            </div>
+            <div id="backpack-counter" class="px-3 py-1 rounded-xl font-mono-tech font-bold text-sm bg-slate-800 text-amber-400 border border-amber-500/30">
+              0 / 5
+            </div>
+          </div>
+
+          <!-- Lista Ordenável dos 5 Slots -->
+          <div id="backpack-slots" class="space-y-2.5 min-h-[290px]">
+            <!-- Slots preenchidos via JS -->
+          </div>
+
+          <!-- Justificativa Estratégica da Equipe -->
+          <div class="pt-2 border-t border-emerald-900/60 space-y-1.5">
+            <label for="team-justification" class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+              <span>Argumento / Justificativa da Equipe (Opcional)</span>
+              <span class="text-[11px] text-slate-500">Para o Conselho Geral</span>
+            </label>
+            <textarea id="team-justification" rows="2" oninput="saveCurrentTeamJustification(this.value)" placeholder="Ex: Priorizamos água, abrigo e fogo para resistir aos 30 dias na montanha..." class="w-full rounded-xl bg-[#071417] border border-emerald-800/50 focus:border-emerald-400 focus:outline-none p-2.5 text-xs text-slate-200 placeholder-slate-600"></textarea>
+          </div>
+
+          <!-- Botões de Ação -->
+          <div class="pt-2 flex flex-col gap-2">
+            <button onclick="proceedToPhase2()" id="btn-to-phase2" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+              <span>Avançar para Fase 2: Imprevistos</span>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </button>
+            <button onclick="backToBriefing()" class="w-full py-2 text-xs text-slate-400 hover:text-white transition">
+              ← Voltar para Configurações
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TELA 3: FASE 2 - REVELAÇÃO BASE & CARTAS DE IMPREVISTOS             -->
+    <!-- =================================================================== -->
+    <section id="screen-phase2" class="hidden animate-enter space-y-6">
+      <!-- Placar Vivo no Topo da Fase 2 -->
+      <div class="bg-[#0c1f23] border border-emerald-800/60 rounded-2xl p-4 sm:p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <span class="text-xs font-mono-tech uppercase tracking-wider text-emerald-400 font-bold">Placar Tático em Tempo Real (Base: 100 PS)</span>
+          <span id="phase2-step-indicator" class="text-xs font-mono-tech text-slate-400">Etapa 1 de 5: Auditoria da Mochila</span>
+        </div>
+        <div id="live-scoreboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <!-- Cards de pontuação das equipes -->
+        </div>
+      </div>
+
+      <!-- Área Central Dinâmica (Auditoria dos Itens -> Eventos 1 a 4 -> Oratória) -->
+      <div id="phase2-stage-container" class="bg-[#0c1f23] border border-emerald-800/50 rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <!-- Conteúdo dinâmico renderizado pelo JS -->
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TELA 4: RELATÓRIO FINAL, RANKING & DEBRIEFING DO 3º ANO             -->
+    <!-- =================================================================== -->
+    <section id="screen-final" class="hidden animate-enter space-y-6">
+      <!-- Banner de Resultado -->
+      <div class="bg-gradient-to-br from-[#0e292e] via-[#0a1d21] to-[#13261e] border border-emerald-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl text-center space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-mono-tech font-bold">
+          SIMULAÇÃO CONCLUÍDA • RESGATE EFETUADO
+        </div>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white">Relatório Final de Sobrevivência</h2>
+        <p class="text-sm text-slate-300 max-w-2xl mx-auto">
+          Confira o desempenho estratégico na ilha, o impacto das escolhas sob pressão e os pontos de reflexão para a jornada pós-Ensino Médio.
+        </p>
+      </div>
+
+      <!-- Navegação de Abas Finais -->
+      <div class="flex flex-wrap gap-2 border-b border-emerald-900/60 pb-3">
+        <button onclick="switchFinalTab('ranking')" id="tab-btn-ranking" class="px-4 py-2 rounded-xl text-sm font-bold bg-emerald-500 text-slate-950 transition">
+          🏆 Placar e Extrato Detalhado
+        </button>
+        <button onclick="switchFinalTab('debriefing')" id="tab-btn-debriefing" class="px-4 py-2 rounded-xl text-sm font-bold bg-[#0c1f23] text-slate-300 hover:text-white border border-emerald-800/50 transition">
+          🎓 Debriefing: Conexão com o 3º Ano
+        </button>
+        <button onclick="switchFinalTab('items-table')" id="tab-btn-items-table" class="px-4 py-2 rounded-xl text-sm font-bold bg-[#0c1f23] text-slate-300 hover:text-white border border-emerald-800/50 transition">
+          📋 Gabarito Técnico dos 12 Itens
+        </button>
+        <button onclick="resetEntireGame()" class="ml-auto px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition">
+          ↻ Nova Simulação
+        </button>
+      </div>
+
+      <!-- Conteúdo Aba 1: Ranking e Extrato -->
+      <div id="final-tab-ranking" class="space-y-6">
+        <div id="final-teams-breakdown" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Cards detalhados por equipe -->
+        </div>
+      </div>
+
+      <!-- Conteúdo Aba 2: Debriefing 3º Ano -->
+      <div id="final-tab-debriefing" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Pilar 1 -->
+          <div class="bg-[#0c1f23] border border-emerald-800/50 rounded-2xl p-6 space-y-3">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-2xl">🗣️</div>
+            <h3 class="text-lg font-extrabold text-white">1. Liderança e Escuta Ativa</h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Quem assumiu a liderança naturalmente nos grupos? Alguém teve uma ideia excelente (como levar a panela ou a lona), mas não foi ouvido porque falou baixo ou cedeu à pressão da maioria?
+            </p>
+            <div class="p-3 rounded-xl bg-[#071417] text-xs text-emerald-300 border border-emerald-900/60">
+              <strong>Conexão Mercado & Universidade:</strong> Em dinâmicas de grupo e projetos acadêmicos, saber defender um argumento técnico com clareza importa tanto quanto ter a ideia certa.
+            </div>
+          </div>
+
+          <!-- Pilar 2 -->
+          <div class="bg-[#0c1f23] border border-amber-700/40 rounded-2xl p-6 space-y-3">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-2xl">⛈️</div>
+            <h3 class="text-lg font-extrabold text-white">2. Gestão de Crise e Adaptação</h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Quando o cenário mudou (a tempestade tropical, o acidente na subida, o atraso no resgate), vocês conseguiram recalcular a rota ou ficaram presos ao plano inicial?
+            </p>
+            <div class="p-3 rounded-xl bg-[#071417] text-xs text-amber-300 border border-amber-900/50">
+              <strong>Conexão Pós-3º Ano:</strong> Notas de corte mudam, planos de carreira evoluem e imprevistos surgem. Resiliência é adaptar a estratégia sem perder o objetivo final.
+            </div>
+          </div>
+
+          <!-- Pilar 3 -->
+          <div class="bg-[#0c1f23] border border-sky-700/40 rounded-2xl p-6 space-y-3">
+            <div class="w-12 h-12 rounded-xl bg-sky-500/15 border border-sky-500/40 flex items-center justify-center text-2xl">🎯</div>
+            <h3 class="text-lg font-extrabold text-white">3. Priorização e Foco</h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Por que itens que pareciam atraentes (como 5 pacotes de ração ou o rádio) valiam menos que uma lona ou panela? Porque recursos prontos acabam rápido, enquanto ferramentas multiplicam resultados.
+            </p>
+            <div class="p-3 rounded-xl bg-[#071417] text-xs text-sky-300 border border-sky-900/50">
+              <strong>Conexão Vida Adulta:</strong> Tempo, energia e dinheiro são limitados como os 5 espaços da mochila. Saber dizer "não" para distrações garante o que é essencial.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conteúdo Aba 3: Gabarito Técnico dos 12 Itens -->
+      <div id="final-tab-items-table" class="hidden">
+        <div class="bg-[#0c1f23] border border-emerald-800/50 rounded-2xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-[#071417] border-b border-emerald-800/60 text-xs font-mono-tech uppercase text-slate-400">
+                  <th class="p-4">Item</th>
+                  <th class="p-4 text-center">Pontuação Base</th>
+                  <th class="p-4">Justificativa Técnica de Sobrevivência</th>
+                </tr>
+              </thead>
+              <tbody id="gabarito-tbody" class="divide-y divide-emerald-900/40 text-sm">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // DADOS MESTRES DO JOGO (12 ITENS E 4 CARTAS DE IMPREVISTOS)
+    // =========================================================================
+    const ITEMS_DATA = [
+      {
+        id: 'panela',
+        name: 'Panela de metal',
+        icon: '🍲',
+        shortDesc: 'Recipiente metálico resistente ao fogo direto.',
+        points: 25,
+        justification: 'Essencial para ferver água da chuva/riachos e cozinhar alimentos coletados por 30 dias.'
+      },
+      {
+        id: 'lona',
+        name: 'Lona plástica de 4x4 metros',
+        icon: '⛺',
+        shortDesc: 'Cobertura impermeável de grande extensão.',
+        points: 25,
+        justification: 'Abrigo térmico contra chuva/sol e excelente coletor de água da chuva.'
+      },
+      {
+        id: 'facao',
+        name: 'Facão de mato',
+        icon: '🔪',
+        shortDesc: 'Lâmina pesada para corte e abertura de trilha.',
+        points: 20,
+        justification: 'Abrir trilhas, cortar madeira para abrigo/fogueira e abrir cocos e frutos.'
+      },
+      {
+        id: 'fosforos',
+        name: "Caixa de fósforos à prova d'água",
+        icon: '🔥',
+        shortDesc: 'Ignição garantida mesmo sob umidade intensa.',
+        points: 20,
+        justification: 'Fogo garante calor, purificação de água, preparo de comida e sinalização.'
+      },
+      {
+        id: 'kit_medico',
+        name: 'Kit de primeiros socorros básico',
+        icon: '🩹',
+        shortDesc: 'Ataduras, antissépticos, analgésicos e gazes.',
+        points: 15,
+        justification: 'Infecções simples em ambientes tropicais evoluem rápido sem higienização adequada.'
+      },
+      {
+        id: 'corda',
+        name: 'Corda de nylon de 20 metros',
+        icon: '🪢',
+        shortDesc: 'Alta resistência para amarração e escalada leve.',
+        points: 15,
+        justification: 'Fundamental para estruturar abrigos elevados, amarrar recursos e auxiliar em terrenos íngremes.'
+      },
+      {
+        id: 'espelho',
+        name: 'Espelho de sinalização',
+        icon: '🪞',
+        shortDesc: 'Superfície refletora de longo alcance.',
+        points: 10,
+        justification: 'Não depende de bateria e reflete luz solar a quilômetros para aviões ou navios.'
+      },
+      {
+        id: 'agua',
+        name: '10 litros de água potável',
+        icon: '💧',
+        shortDesc: 'Galão lacrado pronto para consumo imediato.',
+        points: 5,
+        justification: 'Ajuda nos primeiros 2 a 3 dias, mas acaba muito rápido para um grupo inteiro.'
+      },
+      {
+        id: 'racao',
+        name: '5 pacotes de ração militar desidratada',
+        icon: '🥫',
+        shortDesc: 'Alimento calórico compacto de emergência.',
+        points: 5,
+        justification: 'Dura pouquíssimo para 5-6 pessoas; não substitui a necessidade de obter comida na ilha.'
+      },
+      {
+        id: 'lanterna',
+        name: 'Lanterna solar',
+        icon: '🔦',
+        shortDesc: 'Iluminação portátil recarregável pelo sol.',
+        points: 5,
+        justification: 'Útil para deslocamentos noturnos, mas a fogueira já supre parte dessa função.'
+      },
+      {
+        id: 'radio',
+        name: 'Rádio transmissor (apenas recebe sinal)',
+        icon: '📻',
+        shortDesc: 'Aparelho receptor de frequências AM/FM.',
+        points: -5,
+        justification: 'Peso morto: não permite pedir socorro e apenas gera ansiedade com notícias externas.'
+      },
+      {
+        id: 'bussola',
+        name: 'Bússola',
+        icon: '🧭',
+        shortDesc: 'Instrumento magnético de orientação geográfica.',
+        points: -10,
+        justification: 'Inútil em uma ilha deserta pequena onde o grupo já está acampado no ponto mais alto.'
+      }
+    ];
+
+    const CRISIS_EVENTS = [
+      {
+        id: 'ev1',
+        number: 1,
+        title: 'O Acidente na Subida',
+        icon: '🧗‍♂️',
+        story: 'Durante a subida apressada para o topo da montanha antes da maré subir, um integrante escorregou nas pedras molhadas, torceu gravemente o tornozelo e sofreu um corte profundo na perna.',
+        ruleText: 'Requer: Kit de primeiros socorros básico (+15 PS) | Sem o item: (-20 PS)',
+        evaluate: (bagIds) => {
+          if (bagIds.includes('kit_medico')) {
+            return {
+              delta: 15,
+              status: 'success',
+              message: 'O Kit de Primeiros Socorros permitiu imobilizar o tornozelo e desinfetar o corte imediatamente!'
+            };
+          }
+          return {
+            delta: -20,
+            status: 'danger',
+            message: 'Sem o Kit Médico, o grupo precisou improvisar talas e sofreu com dor e risco de infecção.'
+          };
+        }
+      },
+      {
+        id: 'ev2',
+        number: 2,
+        title: 'A Tempestade Tropical',
+        icon: '⛈️',
+        story: 'Uma tempestade tropical violenta atinge a ilha durante 3 dias seguidos, com ventos fortes e queda brusca de temperatura durante a madrugada.',
+        ruleText: 'Requer: Lona plástica de 4x4 metros (+20 PS) | Sem o item: (-25 PS)',
+        evaluate: (bagIds) => {
+          if (bagIds.includes('lona')) {
+            return {
+              delta: 20,
+              status: 'success',
+              message: 'A Lona de 4x4m protegeu todos da hipotermia e ainda acumulou litros de água limpa da chuva!'
+            };
+          }
+          return {
+            delta: -25,
+            status: 'danger',
+            message: 'Expostos à chuva fria por 72 horas, os integrantes sofreram exaustão térmica severa.'
+          };
+        }
+      },
+      {
+        id: 'ev3',
+        number: 3,
+        title: 'A Água Contaminada',
+        icon: '🦠',
+        story: 'No 4º dia, qualquer reserva inicial de água acabou. Vocês encontraram um riacho no vale, mas a água é turva e pode causar infecção intestinal grave se bebida sem tratamento.',
+        ruleText: 'Panela + Fósforos (+25 PS) | Apenas UM dos dois (+10 PS) | Nenhum (-30 PS)',
+        evaluate: (bagIds) => {
+          const hasPanela = bagIds.includes('panela');
+          const hasFosforos = bagIds.includes('fosforos');
+          if (hasPanela && hasFosforos) {
+            return {
+              delta: 25,
+              status: 'success',
+              message: 'Combinação perfeita! Fósforos acenderam o fogo e a Panela ferveu a água, garantindo hidratação segura.'
+            };
+          } else if (hasPanela || hasFosforos) {
+            const which = hasPanela ? 'a Panela (mas demorou a gerar fogo por fricção)' : 'os Fósforos (mas precisou improvisar recipientes)';
+            return {
+              delta: 10,
+              status: 'warning',
+              message: `Solução parcial: o grupo tinha ${which}, conseguindo purificar parte da água com esforço.`
+            };
+          }
+          return {
+            delta: -30,
+            status: 'danger',
+            message: 'Sem Panela e sem Fósforos, o grupo sofreu desidratação e infecção gastrointestinal.'
+          };
+        }
+      },
+      {
+        id: 'ev4',
+        number: 4,
+        title: 'O Avião de Busca',
+        icon: '🛩️',
+        story: 'No 35º dia (após o atraso causado pelas tempestades), um avião de reconhecimento passa a 5 km da costa, alto demais para ouvir gritos ou ver acenos simples.',
+        ruleText: 'Espelho de sinalização OU Fósforos (+30 PS) | Nenhum (-20 PS)',
+        evaluate: (bagIds) => {
+          const hasEspelho = bagIds.includes('espelho');
+          const hasFosforos = bagIds.includes('fosforos');
+          if (hasEspelho || hasFosforos) {
+            const method = hasEspelho
+              ? 'o feixe luminoso do Espelho de Sinalização'
+              : 'uma coluna densa de fumaça feita com os Fósforos';
+            return {
+              delta: 30,
+              status: 'success',
+              message: `Resgate acionado! O piloto avistou ${method} e confirmou a posição da equipe.`
+            };
+          }
+          return {
+            delta: -20,
+            status: 'danger',
+            message: 'Sem sinalização de longo alcance, o avião passou direto e o resgate demorou mais uma semana.'
+          };
+        }
+      }
+    ];
+
+    // =========================================================================
+    // ESTADO DA APLICAÇÃO
+    // =========================================================================
+    const state = {
+      mode: 'solo', // 'solo' | 'multi' | 'council'
+      teamCount: 4,
+      teams: [],
+      activeTeamIndex: 0,
+      phase2Step: 0, // 0: Auditoria Base, 1..4: Eventos, 5: Oratória/Consenso (se multi/council)
+      oratoryWinnerId: null,
+      consensusPenaltyApplied: false
+    };
+
+    // Cronômetro
+    let timerSeconds = 15 * 60;
+    let timerInterval = null;
+    let timerRunning = false;
+
+    // =========================================================================
+    // UTILITÁRIOS DE INTERFACE E NOTIFICAÇÃO
+    // =========================================================================
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        info: 'bg-[#0f292e] border-emerald-500/60 text-emerald-200',
+        warn: 'bg-[#2a1f0d] border-amber-500/70 text-amber-200',
+        error: 'bg-[#2b1114] border-red-500/70 text-red-200'
+      };
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-medium animate-enter ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function updateTimerUI() {
+      const mins = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+      const secs = (timerSeconds % 60).toString().padStart(2, '0');
+      const el = document.getElementById('timer-display');
+      el.textContent = `${mins}:${secs}`;
+      if (timerSeconds <= 60 && timerSeconds > 0) {
+        el.classList.remove('text-amber-400');
+        el.classList.add('text-red-400', 'animate-pulse');
+      } else {
+        el.classList.add('text-amber-400');
+        el.classList.remove('text-red-400', 'animate-pulse');
+      }
+    }
+
+    function setTimerPreset(minutes) {
+      pauseTimer();
+      timerSeconds = minutes * 60;
+      updateTimerUI();
+      showToast(`Cronômetro ajustado para ${minutes} minutos.`);
+    }
+
+    function toggleTimer() {
+      if (timerRunning) {
+        pauseTimer();
+      } else {
+        timerRunning = true;
+        document.getElementById('timer-toggle-btn').textContent = 'Pausar';
+        document.getElementById('timer-toggle-btn').classList.replace('bg-emerald-600', 'bg-amber-500');
+        timerInterval = setInterval(() => {
+          if (timerSeconds > 0) {
+            timerSeconds--;
+            updateTimerUI();
+          } else {
+            pauseTimer();
+            showToast('⏰ Tempo esgotado! Encerrem as negociações.', 'warn');
+          }
+        }, 1000);
+      }
+    }
+
+    function pauseTimer() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      const btn = document.getElementById('timer-toggle-btn');
+      btn.textContent = 'Iniciar';
+      btn.classList.replace('bg-amber-500', 'bg-emerald-600');
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      timerSeconds = state.mode === 'council' ? 10 * 60 : 15 * 60;
+      updateTimerUI();
+    }
+
+    // =========================================================================
+    // TELA 1: BRIEFING & CONFIGURAÇÃO DE EQUIPES
+    // =========================================================================
+    function selectGameMode(mode) {
+      state.mode = mode;
+
+      // Atualiza estilos dos botões
+      ['solo', 'multi', 'council'].forEach(m => {
+        const btn = document.getElementById(`mode-btn-${m}`);
+        if (m === mode) {
+          btn.className = 'w-full text-left p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-950/40 transition flex items-start gap-3';
+        } else {
+          btn.className = 'w-full text-left p-3.5 rounded-xl border-2 border-slate-800 bg-[#0d2226] hover:border-emerald-700 transition flex items-start gap-3';
+        }
+      });
+
+      const multiWrapper = document.getElementById('multi-count-wrapper');
+      if (mode === 'multi') {
+        multiWrapper.classList.remove('hidden');
+      } else {
+        multiWrapper.classList.add('hidden');
+      }
+
+      renderTeamNameInputs();
+    }
+
+    function setTeamCount(count) {
+      state.teamCount = count;
+      document.querySelectorAll('.team-count-btn').forEach(btn => {
+        if (parseInt(btn.textContent, 10) === count) {
+          btn.className = 'team-count-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-bold bg-emerald-600 text-slate-950';
+        } else {
+          btn.className = 'team-count-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-bold bg-slate-800 text-slate-300';
+        }
+      });
+      renderTeamNameInputs();
+    }
+
+    function renderTeamNameInputs() {
+      const container = document.getElementById('team-names-inputs');
+      container.innerHTML = '';
+
+      if (state.mode === 'solo') {
+        container.innerHTML = `
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Nome da Equipe / Expedicionário:</label>
+            <input type="text" id="team-name-0" value="Equipe Expedição Alpha" class="w-full rounded-xl bg-[#0c1f23] border border-emerald-800/60 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none">
+          </div>
+        `;
+      } else if (state.mode === 'council') {
+        container.innerHTML = `
+          <div>
+            <label class="text-xs text-amber-300 block mb-1">Representação da Turma (Lista Única):</label>
+            <input type="text" id="team-name-0" value="Conselho Geral da Turma" class="w-full rounded-xl bg-[#0c1f23] border border-amber-500/50 px-3 py-2 text-sm text-white focus:border-amber-400 focus:outline-none">
+          </div>
+        `;
+      } else {
+        const defaultNames = ['Grupo 1 - Alpha', 'Grupo 2 - Beta', 'Grupo 3 - Delta', 'Grupo 4 - Ômega', 'Grupo 5 - Sigma', 'Grupo 6 - Orion'];
+        for (let i = 0; i < state.teamCount; i++) {
+          container.innerHTML += `
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono-tech text-emerald-400 w-6">#${i + 1}</span>
+              <input type="text" id="team-name-${i}" value="${defaultNames[i]}" class="flex-1 rounded-xl bg-[#0c1f23] border border-emerald-800/60 px-3 py-1.5 text-sm text-white focus:border-emerald-400 focus:outline-none">
+            </div>
+          `;
+        }
+      }
+    }
+
+    function startPhase1() {
+      const count = state.mode === 'multi' ? state.teamCount : 1;
+      state.teams = [];
+      for (let i = 0; i < count; i++) {
+        const inputEl = document.getElementById(`team-name-${i}`);
+        const name = inputEl && inputEl.value.trim() ? inputEl.value.trim() : `Equipe ${i + 1}`;
+        state.teams.push({
+          id: `team_${i}`,
+          name,
+          bag: [], // array de item IDs na ordem de prioridade (0 = 1º lugar)
+          justification: '',
+          score: 100,
+          logs: []
+        });
+      }
+
+      state.activeTeamIndex = 0;
+      state.oratoryWinnerId = null;
+      state.consensusPenaltyApplied = false;
+
+      // Ajusta cronômetro conforme modo
+      setTimerPreset(state.mode === 'council' ? 10 : 15);
+
+      document.getElementById('phase-badge').textContent = state.mode === 'council' ? 'CONSELHO GERAL' : 'FASE 1 • SELEÇÃO';
+      document.getElementById('screen-briefing').classList.add('hidden');
+      document.getElementById('screen-phase1').classList.remove('hidden');
+
+      renderPhase1();
+    }
+
+    function backToBriefing() {
+      pauseTimer();
+      document.getElementById('phase-badge').textContent = 'BRIEFING';
+      document.getElementById('screen-phase1').classList.add('hidden');
+      document.getElementById('screen-briefing').classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // TELA 2: FASE 1 - CATÁLOGO E MOCHILA DE 5 ITENS
+    // =========================================================================
+    function renderPhase1() {
+      const currentTeam = state.teams[state.activeTeamIndex];
+
+      // Abas se houver múltiplos grupos
+      const tabsBar = document.getElementById('phase1-team-tabs');
+      const tabsList = document.getElementById('team-tabs-list');
+      if (state.mode === 'multi') {
+        tabsBar.classList.remove('hidden');
+        tabsList.innerHTML = state.teams.map((t, idx) => {
+          const isCurrent = idx === state.activeTeamIndex;
+          const isReady = t.bag.length === 5;
+          return `
+            <button onclick="switchActiveTeam(${idx})" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              isCurrent
+                ? 'bg-emerald-500 text-slate-950 shadow-md'
+                : 'bg-[#08171a] text-slate-300 hover:text-white border border-emerald-800/50'
+            }">
+              <span>${t.name}</span>
+              <span class="font-mono-tech px-1.5 py-0.5 rounded ${
+                isCurrent ? 'bg-slate-950/20 text-slate-950' : isReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-amber-400'
+              }">${t.bag.length}/5</span>
+            </button>
+          `;
+        }).join('');
+      } else {
+        tabsBar.classList.add('hidden');
+      }
+
+      document.getElementById('current-editing-team-badge').textContent = currentTeam.name;
+      document.getElementById('team-justification').value = currentTeam.justification || '';
+
+      // Renderiza Catálogo de 12 itens
+      const catalogGrid = document.getElementById('items-catalog-grid');
+      catalogGrid.innerHTML = ITEMS_DATA.map((item, index) => {
+        const rankIndex = currentTeam.bag.indexOf(item.id);
+        const isSelected = rankIndex !== -1;
+        return `
+          <button type="button" onclick="toggleItemInBag('${item.id}')" class="text-left p-3.5 rounded-xl border transition-all flex items-start gap-3 relative ${
+            isSelected
+              ? 'bg-emerald-950/50 border-emerald-400 shadow-md shadow-emerald-950/50'
+              : 'bg-[#0c1f23] border-emerald-900/50 hover:border-emerald-600/70 hover:bg-[#10282d]'
+          }">
+            <div class="w-10 h-10 rounded-xl bg-[#071417] border border-emerald-800/50 flex items-center justify-center text-xl shrink-0">
+              ${item.icon}
+            </div>
+            <div class="flex-1 min-w-0 pr-6">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] font-mono-tech text-slate-500">#${index + 1}</span>
+                <h4 class="font-bold text-sm text-white truncate">${item.name}</h4>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5 line-clamp-2">${item.shortDesc}</p>
+            </div>
+            ${
+              isSelected
+                ? `<span class="absolute top-3 right-3 w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-mono-tech font-extrabold text-xs flex items-center justify-center shadow">${rankIndex + 1}º</span>`
+                : `<span class="absolute top-3 right-3 w-6 h-6 rounded-full border border-slate-700 text-slate-500 text-xs flex items-center justify-center">+</span>`
+            }
+          </button>
+        `;
+      }).join('');
+
+      // Renderiza Mochila (5 slots)
+      const counterEl = document.getElementById('backpack-counter');
+      counterEl.textContent = `${currentTeam.bag.length} / 5`;
+      counterEl.className = currentTeam.bag.length === 5
+        ? 'px-3 py-1 rounded-xl font-mono-tech font-bold text-sm bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
+        : 'px-3 py-1 rounded-xl font-mono-tech font-bold text-sm bg-slate-800 text-amber-400 border border-amber-500/30';
+
+      const slotsEl = document.getElementById('backpack-slots');
+      let slotsHTML = '';
+      for (let i = 0; i < 5; i++) {
+        const itemId = currentTeam.bag[i];
+        if (itemId) {
+          const item = ITEMS_DATA.find(x => x.id === itemId);
+          const isTopPriority = i === 0 || i === 1;
+          slotsHTML += `
+            <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#08171a] border ${isTopPriority ? 'border-amber-500/50' : 'border-emerald-800/50'} animate-enter">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-7 h-7 rounded-lg font-mono-tech font-extrabold text-xs flex items-center justify-center shrink-0 ${
+                  i === 0 ? 'bg-amber-400 text-slate-950' : i === 1 ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50' : 'bg-slate-800 text-slate-300'
+                }">${i + 1}º</span>
+                <span class="text-lg">${item.icon}</span>
+                <span class="text-xs sm:text-sm font-semibold text-white truncate">${item.name}</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="moveItemRank(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Subir prioridade" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-200 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
+                </button>
+                <button type="button" onclick="moveItemRank(${i}, 1)" ${i === currentTeam.bag.length - 1 ? 'disabled' : ''} title="Descer prioridade" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-200 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <button type="button" onclick="toggleItemInBag('${item.id}')" title="Remover item" class="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition ml-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          slotsHTML += `
+            <div class="flex items-center gap-3 p-2.5 rounded-xl border border-dashed border-slate-800 bg-[#071417]/50 text-slate-600">
+              <span class="w-7 h-7 rounded-lg bg-slate-900 font-mono-tech text-xs flex items-center justify-center">${i + 1}º</span>
+              <span class="text-xs">Espaço vazio na mochila...</span>
+            </div>
+          `;
+        }
+      }
+      slotsEl.innerHTML = slotsHTML;
+    }
+
+    function switchActiveTeam(index) {
+      state.activeTeamIndex = index;
+      renderPhase1();
+    }
+
+    function toggleItemInBag(itemId) {
+      const team = state.teams[state.activeTeamIndex];
+      const idx = team.bag.indexOf(itemId);
+      if (idx !== -1) {
+        team.bag.splice(idx, 1);
+      } else {
+        if (team.bag.length >= 5) {
+          showToast('A mochila já atingiu o limite máximo de 5 itens! Remova um item antes.', 'warn');
+          return;
+        }
+        team.bag.push(itemId);
+      }
+      renderPhase1();
+    }
+
+    function moveItemRank(index, direction) {
+      const team = state.teams[state.activeTeamIndex];
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= team.bag.length) return;
+      const temp = team.bag[index];
+      team.bag[index] = team.bag[targetIndex];
+      team.bag[targetIndex] = temp;
+      renderPhase1();
+    }
+
+    function saveCurrentTeamJustification(text) {
+      state.teams[state.activeTeamIndex].justification = text;
+    }
+
+    function proceedToPhase2() {
+      // Verifica se todas as equipes têm exatamente 5 itens
+      const incompleteTeamIndex = state.teams.findIndex(t => t.bag.length !== 5);
+      if (incompleteTeamIndex !== -1) {
+        state.activeTeamIndex = incompleteTeamIndex;
+        renderPhase1();
+        showToast(`A equipe "${state.teams[incompleteTeamIndex].name}" precisa selecionar exatamente 5 itens!`, 'error');
+        return;
+      }
+
+      pauseTimer();
+      calculateBaseScores();
+      state.phase2Step = 0;
+
+      document.getElementById('phase-badge').textContent = 'FASE 2 • IMPREVISTOS';
+      document.getElementById('screen-phase1').classList.add('hidden');
+      document.getElementById('screen-phase2').classList.remove('hidden');
+
+      renderPhase2();
+    }
+
+    // =========================================================================
+    // TELA 3: FASE 2 - AUDITORIA BASE & CARTAS DE IMPREVISTOS
+    // =========================================================================
+    function calculateBaseScores() {
+      state.teams.forEach(team => {
+        team.score = 100;
+        team.logs = [];
+        let itemsSum = 0;
+
+        team.bag.forEach((itemId, rankIdx) => {
+          const item = ITEMS_DATA.find(x => x.id === itemId);
+          itemsSum += item.points;
+          team.logs.push({
+            category: 'Item',
+            label: `${rankIdx + 1}º: ${item.name}`,
+            delta: item.points,
+            detail: item.justification
+          });
+        });
+
+        team.score += itemsSum;
+
+        // Bônus de Priorização (+10 PS se Panela ou Lona estiverem em 1º ou 2º lugar)
+        const topTwo = team.bag.slice(0, 2);
+        if (topTwo.includes('panela') || topTwo.includes('lona')) {
+          team.score += 10;
+          team.logs.push({
+            category: 'Bônus',
+            label: 'Bônus de Visão Estratégica (1º ou 2º lugar)',
+            delta: 10,
+            detail: 'Priorizou abrigo (Lona) ou purificação/cozimento (Panela) no topo da lista.'
+          });
+        }
+      });
+    }
+
+    function renderLiveScoreboard() {
+      const board = document.getElementById('live-scoreboard');
+      board.innerHTML = state.teams.map(team => {
+        const scoreColor = team.score >= 130 ? 'text-emerald-400' : team.score >= 80 ? 'text-amber-400' : 'text-red-400';
+        return `
+          <div class="bg-[#071417] border border-emerald-900/60 rounded-xl p-3.5 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="font-bold text-sm text-white truncate">${team.name}</div>
+              <div class="flex items-center gap-1 mt-1">
+                ${team.bag.map(id => {
+                  const it = ITEMS_DATA.find(x => x.id === id);
+                  return `<span title="${it.name}" class="text-sm bg-[#0f292e] px-1.5 py-0.5 rounded border border-emerald-800/40">${it.icon}</span>`;
+                }).join('')}
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-[10px] font-mono-tech text-slate-500 uppercase">Pontuação</div>
+              <div class="font-mono-tech text-xl font-extrabold ${scoreColor}">${team.score} PS</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPhase2() {
+      renderLiveScoreboard();
+      const container = document.getElementById('phase2-stage-container');
+      const stepIndicator = document.getElementById('phase2-step-indicator');
+      const hasExtraStep = state.mode === 'multi' || state.mode === 'council';
+      const totalSteps = hasExtraStep ? 6 : 5;
+
+      // ETAPA 0: REVELAÇÃO DOS PONTOS BASE DOS 5 ITENS ESCOLHIDOS
+      if (state.phase2Step === 0) {
+        stepIndicator.textContent = `Etapa 1 de ${totalSteps}: Auditoria Técnica da Mochila`;
+        container.innerHTML = `
+          <div class="space-y-6 animate-enter">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-900/60 pb-4">
+              <div>
+                <span class="text-xs font-mono-tech text-emerald-400 uppercase font-bold">Avaliação dos Recursos Salvos</span>
+                <h3 class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">Pontuação Base dos Itens Escolhidos</h3>
+              </div>
+              <button onclick="advancePhase2Step()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-sm shadow-lg transition flex items-center gap-2">
+                <span>Sortear 1º Imprevisto</span>
+                <span>⚡</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              ${state.teams.map(team => `
+                <div class="bg-[#071417] border border-emerald-800/50 rounded-xl p-4 space-y-3">
+                  <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h4 class="font-bold text-white">${team.name}</h4>
+                    <span class="font-mono-tech text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Subtotal: ${team.score} PS</span>
+                  </div>
+                  <div class="space-y-1.5">
+                    ${team.logs.map(log => `
+                      <div class="flex items-center justify-between text-xs py-1 px-2 rounded bg-[#0c1f23]">
+                        <span class="text-slate-300 truncate pr-2">${log.label}</span>
+                        <span class="font-mono-tech font-bold shrink-0 ${log.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                          ${log.delta >= 0 ? '+' + log.delta : log.delta} PS
+                        </span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // ETAPAS 1 A 4: AS 4 CARTAS DE IMPREVISTOS
+      if (state.phase2Step >= 1 && state.phase2Step <= 4) {
+        const event = CRISIS_EVENTS[state.phase2Step - 1];
+        stepIndicator.textContent = `Etapa ${state.phase2Step + 1} de ${totalSteps}: Carta de Imprevisto #${event.number}`;
+
+        const nextLabel = state.phase2Step < 4
+          ? `Próximo Imprevisto (#${state.phase2Step + 1})`
+          : hasExtraStep
+            ? 'Avançar para Conselho & Oratória'
+            : 'Ver Relatório Final';
+
+        container.innerHTML = `
+          <div class="space-y-6 animate-enter">
+            <!-- Carta de Alerta -->
+            <div class="bg-gradient-to-r from-[#231409] via-[#1a1817] to-[#0c1f23] border-2 border-amber-500/70 rounded-2xl p-5 sm:p-6 crisis-alert">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div class="inline-flex items-center gap-2 text-amber-400 font-mono-tech text-xs font-bold uppercase tracking-wider">
+                  <span>⚠️ CARTA DE IMPREVISTO ${event.number} / 4</span>
+                </div>
+                <span class="text-xs font-mono-tech px-3 py-1 rounded-full bg-slate-900/90 text-slate-300 border border-slate-700">
+                  ${event.ruleText}
+                </span>
+              </div>
+              <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-3xl shrink-0">
+                  ${event.icon}
+                </div>
+                <div class="space-y-1.5">
+                  <h3 class="text-xl sm:text-2xl font-extrabold text-white">${event.title}</h3>
+                  <p class="text-sm sm:text-base text-slate-200 leading-relaxed">${event.story}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Impacto por Equipe -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              ${state.teams.map(team => {
+                const lastLog = team.logs[team.logs.length - 1];
+                const isPos = lastLog.delta > 0;
+                return `
+                  <div class="p-4 rounded-xl border ${isPos ? 'bg-emerald-950/25 border-emerald-500/40' : 'bg-red-950/25 border-red-500/40'} flex flex-col justify-between gap-3">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-white text-sm">${team.name}</span>
+                      <span class="font-mono-tech font-extrabold text-sm px-2.5 py-0.5 rounded-lg ${isPos ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}">
+                        ${lastLog.delta >= 0 ? '+' + lastLog.delta : lastLog.delta} PS
+                      </span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">${lastLog.detail}</p>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button onclick="advancePhase2Step()" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-sm shadow-lg transition flex items-center gap-2">
+                <span>${nextLabel}</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // ETAPA 5 (MODO MULTI OU COUNCIL): ORATÓRIA, PERSUASÃO E CONSENSO
+      if (state.phase2Step === 5) {
+        stepIndicator.textContent = `Etapa ${totalSteps} de ${totalSteps}: Avaliação de Oratória e Consenso`;
+        container.innerHTML = `
+          <div class="space-y-6 animate-enter">
+            <div class="border-b border-emerald-900/60 pb-4">
+              <span class="text-xs font-mono-tech text-amber-400 uppercase font-bold">Dinâmica de Comunicação e Liderança</span>
+              <h3 class="text-xl sm:text-2xl font-extrabold text-white mt-0.5">Conselho Geral: Oratória e Consenso</h3>
+              <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                Aplique os modificadores finais de comunicação da turma antes de encerrar a simulação.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              ${state.mode === 'multi' ? `
+                <div class="bg-[#071417] border border-emerald-800/50 rounded-xl p-5 space-y-3">
+                  <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                    <span>🎙️</span> Voto Secreto de Persuasão (+20 PS)
+                  </div>
+                  <p class="text-xs text-slate-300 leading-relaxed">
+                    Após os 10 minutos de debate entre os porta-vozes, a turma vota em quem apresentou os melhores argumentos (sem votar no próprio grupo).
+                  </p>
+                  <div class="space-y-2 pt-1">
+                    ${state.teams.map(t => `
+                      <button type="button" onclick="toggleOratoryWinner('${t.id}')" class="w-full text-left px-3.5 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-between transition ${
+                        state.oratoryWinnerId === t.id
+                          ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                          : 'bg-[#0c1f23] border-slate-800 text-slate-300 hover:border-emerald-700'
+                      }">
+                        <span>${t.name}</span>
+                        <span>${state.oratoryWinnerId === t.id ? '🏆 Vencedor (+20 PS)' : 'Selecionar'}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="bg-[#071417] border border-amber-800/50 rounded-xl p-5 space-y-3">
+                <div class="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                  <span>⏱️</span> Penalidade por Falta de Consenso (-30 PS)
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                  Se os porta-vozes não conseguiram fechar a lista única dentro dos 10 minutos cronometrados, toda a sala perde 30 PS por falha de gestão de crise.
+                </p>
+                <button type="button" onclick="toggleConsensusPenalty()" class="w-full px-4 py-3 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
+                  state.consensusPenaltyApplied
+                    ? 'bg-red-500/20 border-red-500 text-red-300'
+                    : 'bg-[#0c1f23] border-slate-700 text-slate-300 hover:border-amber-500'
+                }">
+                  <span>${state.consensusPenaltyApplied ? '⚠️ Penalidade Aplicada (-30 PS para todos)' : 'Consenso Alcançado no Prazo (Sem penalidade)'}</span>
+                  <span class="underline">${state.consensusPenaltyApplied ? 'Desfazer' : 'Aplicar -30 PS'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button onclick="finishSimulation()" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-sm shadow-lg transition flex items-center gap-2">
+                <span>Gerar Relatório Final & Debriefing</span>
+                <span>🏆</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function advancePhase2Step() {
+      // Se estamos indo de 0 -> 1, 1 -> 2, 2 -> 3 ou 3 -> 4, avalia o respectivo evento
+      if (state.phase2Step >= 0 && state.phase2Step <= 3) {
+        const event = CRISIS_EVENTS[state.phase2Step];
+        state.teams.forEach(team => {
+          const result = event.evaluate(team.bag);
+          team.score += result.delta;
+          team.logs.push({
+            category: 'Imprevisto',
+            label: `Evento #${event.number}: ${event.title}`,
+            delta: result.delta,
+            detail: result.message
+          });
+        });
+        state.phase2Step++;
+        renderPhase2();
+        return;
+      }
+
+      // Após o 4º evento
+      if (state.phase2Step === 4) {
+        if (state.mode === 'multi' || state.mode === 'council') {
+          state.phase2Step = 5;
+          renderPhase2();
+        } else {
+          finishSimulation();
+        }
+      }
+    }
+
+    function toggleOratoryWinner(teamId) {
+      // Remove bônus anterior se houver
+      if (state.oratoryWinnerId) {
+        const prev = state.teams.find(t => t.id === state.oratoryWinnerId);
+        if (prev) {
+          prev.score -= 20;
+          prev.logs = prev.logs.filter(l => l.category !== 'Oratória');
+        }
+      }
+
+      if (state.oratoryWinnerId === teamId) {
+        state.oratoryWinnerId = null;
+      } else {
+        state.oratoryWinnerId = teamId;
+        const winner = state.teams.find(t => t.id === teamId);
+        if (winner) {
+          winner.score += 20;
+          winner.logs.push({
+            category: 'Oratória',
+            label: 'Bônus de Liderança e Persuasão (Voto da Turma)',
+            delta: 20,
+            detail: 'Eleito o porta-voz mais convincente no Conselho Geral.'
+          });
+        }
+      }
+      renderPhase2();
+    }
+
+    function toggleConsensusPenalty() {
+      state.consensusPenaltyApplied = !state.consensusPenaltyApplied;
+      state.teams.forEach(team => {
+        if (state.consensusPenaltyApplied) {
+          team.score -= 30;
+          team.logs.push({
+            category: 'Consenso',
+            label: 'Penalidade: Falha de Consenso no Conselho Geral',
+            delta: -30,
+            detail: 'A turma ultrapassou os 10 minutos sem chegar a uma decisão unânime.'
+          });
+        } else {
+          team.score += 30;
+          team.logs = team.logs.filter(l => l.category !== 'Consenso');
+        }
+      });
+      renderPhase2();
+    }
+
+    // =========================================================================
+    // TELA 4: RELATÓRIO FINAL & DEBRIEFING
+    // =========================================================================
+    function getSurvivalStatus(score) {
+      if (score >= 180) {
+        return {
+          title: 'Sobrevivência Exemplar',
+          badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50',
+          desc: 'Gestão impecável de recursos, abrigo sólido, água purificada e resgate sinalizado com precisão.'
+        };
+      }
+      if (score >= 120) {
+        return {
+          title: 'Sobreviventes Resilientes',
+          badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-400/50',
+          desc: 'A equipe enfrentou contratempos severos, mas manteve os recursos-chave para resistir até o resgate.'
+        };
+      }
+      return {
+        title: 'Sobrevivência por um Fio',
+        badgeClass: 'bg-red-500/20 text-red-300 border-red-400/50',
+        desc: 'Escolhas críticas comprometeram abrigo, saúde ou sinalização. O grupo sobreviveu no limite extremo.'
+      };
+    }
+
+    function finishSimulation() {
+      document.getElementById('phase-badge').textContent = 'RELATÓRIO FINAL';
+      document.getElementById('screen-phase2').classList.add('hidden');
+      document.getElementById('screen-final').classList.remove('hidden');
+
+      // Ordena equipes por pontuação decrescente
+      const sortedTeams = [...state.teams].sort((a, b) => b.score - a.score);
+
+      const breakdownEl = document.getElementById('final-teams-breakdown');
+      breakdownEl.innerHTML = sortedTeams.map((team, idx) => {
+        const status = getSurvivalStatus(team.score);
+        const rankMedal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
+        return `
+          <div class="bg-[#0c1f23] border ${idx === 0 ? 'border-amber-400/60 shadow-amber-950/30' : 'border-emerald-800/50'} rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="flex items-center gap-2">
+                    ${state.mode === 'multi' ? `<span class="text-xl">${rankMedal}</span>` : ''}
+                    <h3 class="text-lg sm:text-xl font-extrabold text-white">${team.name}</h3>
+                  </div>
+                  <span class="inline-block mt-1 text-xs font-mono-tech font-bold px-2.5 py-0.5 rounded-full border ${status.badgeClass}">
+                    ${status.title}
+                  </span>
+                </div>
+                <div class="text-right">
+                  <div class="text-[11px] font-mono-tech text-slate-400 uppercase">Pontuação Final</div>
+                  <div class="font-mono-tech text-2xl sm:text-3xl font-extrabold text-white">${team.score} <span class="text-sm text-emerald-400">PS</span></div>
+                </div>
+              </div>
+
+              <p class="text-xs text-slate-300 bg-[#071417] p-3 rounded-xl border border-slate-800">
+                ${status.desc}
+              </p>
+
+              ${team.justification ? `
+                <div class="text-xs text-amber-200/90 bg-amber-950/20 border border-amber-500/30 p-2.5 rounded-xl">
+                  <strong>Justificativa da Equipe:</strong> "${team.justification}"
+                </div>
+              ` : ''}
+
+              <!-- Extrato Completo -->
+              <div class="space-y-1.5 pt-2">
+                <div class="text-xs font-mono-tech uppercase text-slate-400 font-bold">Extrato de Pontos (Base: 100 PS)</div>
+                <div class="max-h-60 overflow-y-auto pr-1 space-y-1">
+                  ${team.logs.map(log => `
+                    <div class="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg bg-[#071417] border border-slate-800/80">
+                      <span class="text-slate-300 truncate pr-2">${log.label}</span>
+                      <span class="font-mono-tech font-bold shrink-0 ${log.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                        ${log.delta >= 0 ? '+' + log.delta : log.delta} PS
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Preenche Gabarito Técnico dos 12 Itens
+      const tbody = document.getElementById('gabarito-tbody');
+      tbody.innerHTML = ITEMS_DATA.map(item => `
+        <tr class="hover:bg-[#10282d] transition">
+          <td class="p-4 font-semibold text-white flex items-center gap-2.5">
+            <span class="text-xl">${item.icon}</span>
+            <span>${item.name}</span>
+          </td>
+          <td class="p-4 text-center font-mono-tech font-extrabold ${item.points >= 15 ? 'text-emerald-400' : item.points > 0 ? 'text-amber-300' : 'text-red-400'}">
+            ${item.points > 0 ? '+' + item.points : item.points} PS
+          </td>
+          <td class="p-4 text-slate-300 text-xs sm:text-sm">${item.justification}</td>
+        </tr>
+      `).join('');
+    }
+
+    function switchFinalTab(tabName) {
+      ['ranking', 'debriefing', 'items-table'].forEach(t => {
+        const panel = document.getElementById(`final-tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabName) {
+          panel.classList.remove('hidden');
+          btn.className = 'px-4 py-2 rounded-xl text-sm font-bold bg-emerald-500 text-slate-950 transition';
+        } else {
+          panel.classList.add('hidden');
+          btn.className = 'px-4 py-2 rounded-xl text-sm font-bold bg-[#0c1f23] text-slate-300 hover:text-white border border-emerald-800/50 transition';
+        }
+      });
+    }
+
+    function resetEntireGame() {
+      pauseTimer();
+      timerSeconds = 15 * 60;
+      updateTimerUI();
+      document.getElementById('phase-badge').textContent = 'BRIEFING';
+      document.getElementById('screen-final').classList.add('hidden');
+      document.getElementById('screen-briefing').classList.remove('hidden');
+      switchFinalTab('ranking');
+    }
+
+    // Inicialização ao carregar a página
+    window.onload = function () {
+      selectGameMode('solo');
+      updateTimerUI();
+    };
+  </script>
+</body>
+</html>
